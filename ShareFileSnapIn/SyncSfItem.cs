@@ -573,15 +573,16 @@ namespace ShareFile.Api.Powershell
 
             if (Strict)
             {
+                List<string> fileNamesOnTopLevel = new List<string>();
                 foreach (string path in resolvedPaths)
                 {
                     FileAttributes attr = System.IO.File.GetAttributes(path);
                     if ((attr & FileAttributes.Directory) == FileAttributes.Directory)
                     {
                         DirectoryInfo source = new DirectoryInfo(path);
-
+                        fileNamesOnTopLevel.Add(source.Name);
                         var children = client.Items.GetChildren(target.url).Execute();
-                        
+
                         foreach (var child in children.Feed)
                         {
                             if (child is Models.Folder && child.Name.Equals(source.Name))
@@ -589,6 +590,22 @@ namespace ShareFile.Api.Powershell
                                 DeleteSharefileStrictRecursive(client, source as DirectoryInfo, child);
                                 break;
                             }
+                        }
+                    }
+                    else
+                    {
+                        FileInfo fileSource = new FileInfo(path);
+                        fileNamesOnTopLevel.Add(fileSource.Name);
+                    }
+                }
+                if (resolvedPaths.Count > 1)
+                {
+                    var topLevelchildren = client.Items.GetChildren(target.url).Execute();
+                    foreach (var child in topLevelchildren.Feed)
+                    {
+                        if (!fileNamesOnTopLevel.Contains(child.Name))
+                        {
+                            RemoveShareFileItem(client, child);
                         }
                     }
                 }
